@@ -1,10 +1,49 @@
 'use client'
 
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
+
+interface ReportData {
+  total_spend: string
+  total_sales: string
+  acos: string
+  wasted_spend: string
+  roi: string
+  wasted_products: Array<{ spend: number; sales: number; profit: number }>
+}
 
 export default function ReportPage() {
   const params = useParams()
+  const searchParams = useSearchParams()
   const reportId = params.id as string
+  const [data, setData] = useState<ReportData | null>(null)
+
+  useEffect(() => {
+    // Get data from URL params (passed from upload API)
+    const encodedData = searchParams.get('data')
+    if (encodedData) {
+      try {
+        const decoded = JSON.parse(Buffer.from(encodedData, 'base64').toString())
+        setData(decoded)
+      } catch (e) {
+        console.error('Failed to decode data:', e)
+      }
+    }
+  }, [searchParams])
+
+  // Fallback data if none provided
+  const reportData = data || {
+    total_spend: '12450',
+    total_sales: '28900',
+    acos: '43',
+    wasted_spend: '3240',
+    roi: '132',
+    wasted_products: [
+      { spend: 1240, sales: 890, profit: -350 },
+      { spend: 890, sales: 450, profit: -440 },
+      { spend: 650, sales: 200, profit: -450 },
+    ],
+  }
 
   return (
     <div style={{ background: '#09090b', color: '#ffffff', minHeight: '100vh', padding: '60px 24px', fontFamily: 'system-ui' }}>
@@ -15,10 +54,10 @@ export default function ReportPage() {
         {/* Metrics */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '40px' }}>
           {[
-            { label: 'Total Ad Spend', value: '$12,450' },
-            { label: 'Total Sales', value: '$28,900' },
-            { label: 'ACOS', value: '43%' },
-            { label: 'Wasted Spend', value: '$3,240' },
+            { label: 'Total Ad Spend', value: `$${reportData.total_spend}` },
+            { label: 'Total Sales', value: `$${reportData.total_sales}` },
+            { label: 'ACOS', value: `${reportData.acos}%` },
+            { label: 'Wasted Spend', value: `$${reportData.wasted_spend}` },
           ].map((metric) => (
             <div key={metric.label} style={{ background: '#18181b', border: '1px solid #27272a', borderRadius: '12px', padding: '24px' }}>
               <div style={{ fontSize: '12px', color: '#a1a1aa', marginBottom: '8px' }}>{metric.label}</div>
@@ -42,16 +81,12 @@ export default function ReportPage() {
               </tr>
             </thead>
             <tbody>
-              {[
-                { product: 'Premium Widget Pro', spend: '$1,240', sales: '$890', loss: '-$350' },
-                { product: 'Standard Widget', spend: '$890', sales: '$450', loss: '-$440' },
-                { product: 'Widget Bundle', spend: '$650', sales: '$200', loss: '-$450' },
-              ].map((row, i) => (
+              {reportData.wasted_products.map((product, i) => (
                 <tr key={i} style={{ borderBottom: '1px solid #27272a' }}>
-                  <td style={{ padding: '12px', fontSize: '14px' }}>{row.product}</td>
-                  <td style={{ padding: '12px', fontSize: '14px' }}>{row.spend}</td>
-                  <td style={{ padding: '12px', fontSize: '14px' }}>{row.sales}</td>
-                  <td style={{ padding: '12px', fontSize: '14px', color: '#f43f5e' }}>{row.loss}</td>
+                  <td style={{ padding: '12px', fontSize: '14px' }}>Product {i + 1}</td>
+                  <td style={{ padding: '12px', fontSize: '14px' }}>${product.spend.toFixed(2)}</td>
+                  <td style={{ padding: '12px', fontSize: '14px' }}>${product.sales.toFixed(2)}</td>
+                  <td style={{ padding: '12px', fontSize: '14px', color: '#f43f5e' }}>-${Math.abs(product.profit).toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
